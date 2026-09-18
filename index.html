@@ -6,9 +6,8 @@
 <title>Rosedic</title>
 <script>
 (()=>{try{
-  const m=localStorage.getItem('rosedic-appearance-v1')||'system';
-  const d=m==='dark'||(m==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.dataset.theme=d?'dark':'light';
+  const mode=localStorage.getItem('rosedic-theme-v1');
+  document.documentElement.dataset.theme=mode==='dark'?'dark':'light';
 }catch(e){document.documentElement.dataset.theme='light';}})();
 </script>
 <style>
@@ -178,23 +177,7 @@ button:focus-visible{
 .side-actions button:hover{background:var(--hover);color:var(--ink)}
 
 
-.account-email{
-  width:100%;
-  padding:8px;
-  overflow:hidden;
-  white-space:nowrap;
-  text-overflow:ellipsis;
-  color:var(--gray);
-  font-size:var(--ui-size);
-  font-weight:400;
-  line-height:1.4;
-}
 
-.auth-overlay{
-  z-index:100;
-  background:rgba(247,247,245,.92);
-  backdrop-filter:blur(4px);
-}
 
 .auth-modal{
   width:min(420px,calc(100vw - 32px));
@@ -304,14 +287,22 @@ button:focus-visible{
   margin-left:auto;
   margin-right:auto;
 }
-.toolbar-actions{
+
+/* In video mode, keep the toolbar aligned to the writing pane (right column),
+   not to the video pane on the left. */
+.main.has-video .toolbar{
+  width:calc((100% - var(--gap))/2);
+  margin-left:auto;
+  margin-right:0;
+}
+.toolbar-left,.toolbar-actions{
   display:flex;
   align-items:center;
   gap:var(--button-gap);
-  margin-left:auto;
 }
+.toolbar-actions{margin-left:auto}
 
-.toolbar>button,.toolbar-actions>button{
+.toolbar-left>button,.toolbar-actions>button{
   width:var(--control-h);
   min-width:var(--control-h);
   height:var(--control-h);
@@ -320,23 +311,42 @@ button:focus-visible{
   border-radius:var(--radius-control);
   background:var(--paper);
   color:var(--gray);
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  display:grid;
+  place-items:center;
   flex:0 0 var(--control-h);
   font-size:var(--ui-size);
   font-weight:400;
   line-height:1;
+  text-align:center;
   cursor:pointer;
 }
-.toolbar>button:hover,.toolbar-actions>button:hover{background:var(--hover)}
+.toolbar-left>button:hover,.toolbar-actions>button:hover{background:var(--hover)}
 
-.sidebar-toggle svg{width:var(--icon)!important;height:var(--icon)!important}
+.sidebar-toggle svg,
+.theme-toggle .theme-icon{
+  width:var(--icon)!important;
+  height:var(--icon)!important;
+  display:block;
+}
+.theme-toggle .theme-icon{
+  fill:none;
+  stroke:currentColor;
+  stroke-width:var(--stroke);
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.theme-toggle .contrast-half{
+  fill:currentColor;
+  stroke:none;
+}
 
 .emoji-action{
   font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif!important;
-  font-size:18px!important;
+  font-size:16px!important;
   line-height:1!important;
+  display:grid!important;
+  place-items:center!important;
+  text-align:center!important;
 }
 
 .toolbar svg,.icon svg,.chev svg,.stepper svg{
@@ -657,6 +667,23 @@ button:focus-visible{
   background:rgba(0,0,0,.22);
 }
 .overlay.show{display:flex}
+
+/* Full-screen login / logout entry page */
+body.auth-screen{
+  background:var(--bg);
+}
+
+body.auth-screen .app{
+  visibility:hidden;
+  pointer-events:none;
+}
+
+.overlay.auth-overlay{
+  z-index:100;
+  background:var(--bg);
+  backdrop-filter:none;
+}
+
 .modal{
   width:min(450px,calc(100vw - 32px));
   padding:20px;
@@ -811,7 +838,7 @@ html[data-theme="dark"] .modal-actions .primary:hover{background:#deded9}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
+<body class="auth-screen">
 
 <div class="app">
   <aside class="sidebar">
@@ -827,28 +854,37 @@ html[data-theme="dark"] .modal-actions .primary:hover{background:#deded9}
     <div id="pages" class="pages"></div>
 
     <div class="side-actions">
-      <div id="accountEmail" class="account-email" title=""></div>
-      <button id="backup">전체 백업(JSON)</button>
+      <button id="backup">전체 백업</button>
       <button id="logoutBtn">로그아웃</button>
     </div>
   </aside>
 
   <main class="main">
     <div class="toolbar">
-      <button id="sidebarToggle" class="sidebar-toggle" type="button"
-              aria-label="페이지 목록 접기" aria-expanded="true" title="페이지 목록 접기">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3.5" y="4" width="17" height="16" rx="2"></rect>
-          <path d="M9 4v16"></path>
-        </svg>
-      </button>
+      <div class="toolbar-left">
+        <button id="sidebarToggle" class="sidebar-toggle" type="button"
+                aria-label="페이지 목록 접기" aria-expanded="true" title="페이지 목록 접기">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3.5" y="4" width="17" height="16" rx="2"></rect>
+            <path d="M9 4v16"></path>
+          </svg>
+        </button>
+
+        <button id="themeToggle" class="theme-toggle" type="button"
+                aria-label="화면 모드 전환" title="화면 모드 전환">
+          <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="8.5"></circle>
+            <path class="contrast-half" d="M12 3.5a8.5 8.5 0 0 0 0 17z"></path>
+          </svg>
+        </button>
+      </div>
 
       <div class="toolbar-actions">
       <button id="linkBtn" class="emoji-action" type="button" aria-label="링크" title="링크">🔗</button>
 
       <button id="settingsBtn" class="emoji-action" type="button" aria-label="설정" title="설정" aria-expanded="false">⚙️</button>
 
-      <button id="pdfBtn" class="emoji-action" type="button" aria-label="저장" title="저장">🖨️</button>
+      <button id="pdfBtn" class="emoji-action" type="button" aria-label="인쇄" title="인쇄">🖨️</button>
       </div>
 
       <div id="settings" class="settings">
@@ -903,15 +939,6 @@ html[data-theme="dark"] .modal-actions .primary:hover{background:#deded9}
           <div id="weightPop" class="pop"></div>
         </div>
 
-        <div id="appearanceRow" class="row">
-          <div class="flat">
-            <span class="label">화면 모드</span>
-            <span id="appearanceValue" class="value">시스템</span>
-            <span class="chev"><svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></svg></span>
-          </div>
-          <div id="appearancePop" class="pop"></div>
-        </div>
-
         <div class="divider"></div>
         <div class="section">설명</div>
 
@@ -946,8 +973,7 @@ html[data-theme="dark"] .modal-actions .primary:hover{background:#deded9}
             referrerpolicy="strict-origin-when-cross-origin"
             allowfullscreen></iframe>
         </div>
-        <a id="youtubeOpenLink" class="youtube-open-link" href="#" target="_blank" rel="noopener noreferrer">YouTube에서 열기</a>
-      </section>
+</section>
 
       <section id="paper" class="paper">
         <div id="title" contenteditable="true" spellcheck="true" lang="ko">새 페이지</div>
@@ -1064,18 +1090,19 @@ const COLORS=[
 
   const $=id=>document.getElementById(id);
   const app=document.querySelector('.app'),pages=$('pages'),paper=$('paper'),title=$('title'),editor=$('editor'),settings=$('settings');
+  const sidebarToggle=$('sidebarToggle'),themeToggle=$('themeToggle'),pdfBtn=$('pdfBtn');
   const ctx=$('ctx'),pageCtx=$('pageCtx'),overlay=$('overlay'),noteInput=$('noteInput');
 
   const linkBtn=$('linkBtn'),linkOverlay=$('linkOverlay'),linkInput=$('linkInput');
-  const videoPanel=$('videoPanel'),youtubePlayer=$('youtubePlayer'),youtubeOpenLink=$('youtubeOpenLink');
+  const videoPanel=$('videoPanel'),youtubePlayer=$('youtubePlayer');
   const mainArea=document.querySelector('.main');
   const pageOverlay=$('pageOverlay'),pageNameInput=$('pageNameInput'),pageDialogMessage=$('pageDialogMessage');
   const pageDialogTitle=$('pageDialogTitle'),confirmPageDialog=$('confirmPageDialog');
   const bottomThemeChip=$('bottomThemeChip'),topThemeChip=$('topThemeChip');
-  const bottomThemePop=$('bottomThemePop'),topThemePop=$('topThemePop'),linePop=$('linePop'),weightPop=$('weightPop'),appearancePop=$('appearancePop');
-  const bodySize=$('bodySize'),titleSize=$('titleSize'),lineValue=$('lineValue'),weightValue=$('weightValue'),appearanceValue=$('appearanceValue');
+  const bottomThemePop=$('bottomThemePop'),topThemePop=$('topThemePop'),linePop=$('linePop'),weightPop=$('weightPop');
+  const bodySize=$('bodySize'),titleSize=$('titleSize'),lineValue=$('lineValue'),weightValue=$('weightValue');
   const authOverlay=$('authOverlay'),authUsername=$('authUsername'),authPassword=$('authPassword'),passwordToggle=$('passwordToggle'),authMessage=$('authMessage');
-  const loginBtn=$('loginBtn'),signupBtn=$('signupBtn'),logoutBtn=$('logoutBtn'),accountEmail=$('accountEmail');
+  const loginBtn=$('loginBtn'),signupBtn=$('signupBtn'),logoutBtn=$('logoutBtn');
 
   let state={active:null,pages:{}};
   let range=null,ann=null,saveTimer=null,pageCtxTarget=null,pageDialogMode=null,pageDialogTarget=null;
@@ -1178,24 +1205,23 @@ const COLORS=[
     }
   }
 
-  const APPEARANCE_KEY='rosedic-appearance-v1';
-  const systemTheme=window.matchMedia('(prefers-color-scheme: dark)');
+  const THEME_KEY='rosedic-theme-v1';
 
-  function getAppearance(){
-    const value=localStorage.getItem(APPEARANCE_KEY);
-    return ['system','light','dark'].includes(value)?value:'system';
+  function currentTheme(){
+    return document.documentElement.dataset.theme==='dark'?'dark':'light';
   }
 
-  function applyAppearance(mode=getAppearance()){
-    const effective=mode==='system'?(systemTheme.matches?'dark':'light'):mode;
-    document.documentElement.dataset.theme=effective;
-    appearanceValue.textContent=mode==='light'?'라이트':mode==='dark'?'다크':'시스템';
+  function applyTheme(mode){
+    const theme=mode==='dark'?'dark':'light';
+    document.documentElement.dataset.theme=theme;
+    localStorage.setItem(THEME_KEY,theme);
+    themeToggle.setAttribute('aria-label','화면 모드 전환');
+    themeToggle.title='화면 모드 전환';
   }
 
-  function setAppearance(mode){
-    localStorage.setItem(APPEARANCE_KEY,mode);
-    applyAppearance(mode);
-    buildPops();
+  function toggleTheme(){
+    applyTheme(currentTheme()==='dark'?'light':'dark');
+    requestAnimationFrame(layoutAnnotations);
   }
 
   const USERNAME_DOMAIN='rosedic.local';
@@ -1230,13 +1256,24 @@ const COLORS=[
     authPassword.disabled=busy;
   }
 
+  function clearAuthFields(){
+    authUsername.value='';
+    authPassword.value='';
+    authPassword.type='password';
+    passwordToggle.classList.remove('is-visible');
+    passwordToggle.setAttribute('aria-label','비밀번호 보기');
+    passwordToggle.title='비밀번호 보기';
+  }
+
   function showAuth(){
+    document.body.classList.add('auth-screen');
     authOverlay.classList.add('show');
     requestAnimationFrame(()=>authUsername.focus());
   }
 
   function hideAuth(){
     authOverlay.classList.remove('show');
+    document.body.classList.remove('auth-screen');
   }
 
   function showWorkspace(){
@@ -1266,6 +1303,19 @@ const COLORS=[
       saveCurrent();
       persist();
     },200);
+  }
+
+  function saveCurrent(){
+    const p=current();
+    if(!p)return;
+    p.title=title.textContent.trim()||'제목 없음';
+    p.html=editor.innerHTML;
+    p.themeBottomText=getComputedStyle(paper).getPropertyValue('--theme-bottom-text').trim()||'#AD1A72';
+    p.themeBottomBg=getComputedStyle(paper).getPropertyValue('--theme-bottom-bg').trim()||'#F4DFEB';
+    p.themeTopText=getComputedStyle(paper).getPropertyValue('--theme-top-text').trim()||'#6940A5';
+    p.themeTopBg=getComputedStyle(paper).getPropertyValue('--theme-top-bg').trim()||'#EAE4F2';
+    p.body=Number(bodySize.value)||16;
+    p.titleSize=Number(titleSize.value)||38;
   }
 
   async function pushCloudState(force=false){
@@ -1338,8 +1388,8 @@ const COLORS=[
   async function loadUserWorkspace(user){
     currentUser=user;
     const displayName=emailToUsername(user.email||'');
-    accountEmail.textContent=displayName;
-    accountEmail.title=displayName;
+    logoutBtn.textContent=`로그아웃 (${displayName})`;
+    logoutBtn.title=`로그아웃 (${displayName})`;
 
     const cached=loadLocalCache();
 
@@ -1385,8 +1435,10 @@ const COLORS=[
       stopCloudPolling();
       currentUser=null;
       appReady=false;
-      accountEmail.textContent='';
+      logoutBtn.textContent='로그아웃';
+      logoutBtn.title='로그아웃';
       state={active:null,pages:{}};
+      clearAuthFields();
       setAuthMessage('');
       showAuth();
       return;
@@ -1528,7 +1580,6 @@ const COLORS=[
     if(!parsed){
       youtubePlayer.src='';
       youtubePlayer.dataset.videoSrc='';
-      youtubeOpenLink.href='#';
       videoPanel.classList.remove('show');
       mainArea.classList.remove('has-video');
       requestAnimationFrame(()=>layoutAnnotations());
@@ -1542,7 +1593,6 @@ const COLORS=[
       youtubePlayer.src=src;
       youtubePlayer.dataset.videoSrc=src;
     }
-    youtubeOpenLink.href=p.videoUrl||('https://www.youtube.com/watch?v='+parsed.id);
     videoPanel.classList.add('show');
     mainArea.classList.add('has-video');
     requestAnimationFrame(()=>layoutAnnotations());
@@ -1729,19 +1779,9 @@ const COLORS=[
       b.onclick=e=>{e.stopPropagation();p.weight=o[0];paper.style.setProperty('--title-weight',o[0]);weightValue.textContent=o[1];closePops();buildPops();persist()};
       weightPop.appendChild(b);
     });
-
-    appearancePop.innerHTML='';
-    const appearance=getAppearance();
-    [['system','시스템'],['light','라이트'],['dark','다크']].forEach(o=>{
-      const b=document.createElement('button');
-      b.className='option'+(o[0]===appearance?' active':'');
-      b.textContent=o[1];
-      b.onclick=e=>{e.stopPropagation();closePops();setAppearance(o[0])};
-      appearancePop.appendChild(b);
-    });
   }
   function closePops(){
-    [bottomThemePop,topThemePop,linePop,weightPop,appearancePop].forEach(pop=>{
+    [bottomThemePop,topThemePop,linePop,weightPop].forEach(pop=>{
       pop.classList.remove('show','open-up');
       pop.scrollTop=0;
     });
@@ -1950,8 +1990,9 @@ const COLORS=[
   pageOverlay.addEventListener('mousedown',e=>{if(e.target===pageOverlay)closePageDialog()});
 
   function openLinkModal(){
-    saveCurrent();
     const p=current();
+    if(!p)return;
+    saveCurrent();
     linkInput.value=p.videoUrl||'';
     linkOverlay.classList.add('show');
     requestAnimationFrame(()=>{
@@ -1966,6 +2007,7 @@ const COLORS=[
 
   function savePageLink(){
     const p=current();
+    if(!p)return;
     const value=linkInput.value.trim();
 
     if(value&&!parseYouTubeUrl(value)){
@@ -1984,7 +2026,10 @@ const COLORS=[
 
   linkInput.addEventListener('input',()=>linkInput.setCustomValidity(''));
 
-  linkBtn.onclick=openLinkModal;
+  linkBtn.onclick=e=>{
+    e.preventDefault();
+    openLinkModal();
+  };
   $('cancelLink').onclick=closeLinkModal;
   $('saveLink').onclick=savePageLink;
 
@@ -2017,8 +2062,7 @@ const COLORS=[
   $('topThemeRow').querySelector('.flat').onclick=e=>{e.stopPropagation();togglePop(topThemePop)};
   $('lineRow').querySelector('.flat').onclick=e=>{e.stopPropagation();togglePop(linePop)};
   $('weightRow').querySelector('.flat').onclick=e=>{e.stopPropagation();togglePop(weightPop)};
-  $('appearanceRow').querySelector('.flat').onclick=e=>{e.stopPropagation();togglePop(appearancePop)};
-  [bottomThemePop,topThemePop,linePop,weightPop,appearancePop].forEach(x=>x.onclick=e=>e.stopPropagation());
+  [bottomThemePop,topThemePop,linePop,weightPop].forEach(x=>x.onclick=e=>e.stopPropagation());
 
   document.querySelectorAll('.stepper button').forEach(b=>b.onclick=e=>{
     e.stopPropagation();const s=b.closest('.stepper'),inp=$(s.dataset.target),step=Number(b.dataset.step);
@@ -2165,10 +2209,10 @@ const COLORS=[
     saveCurrent();
     persist();
     await pushCloudState(true);
+    clearAuthFields();
     await sb.auth.signOut();
   };
 
-  const sidebarToggle=$('sidebarToggle');
   sidebarToggle.onclick=()=>{
     const collapsed=app.classList.toggle('sidebar-collapsed');
     const label=collapsed?'페이지 목록 펼치기':'페이지 목록 접기';
@@ -2178,15 +2222,22 @@ const COLORS=[
     requestAnimationFrame(layoutAnnotations);
   };
 
+  themeToggle.addEventListener('click',e=>{
+    e.preventDefault();
+    toggleTheme();
+  });
+
   $('newPage').onclick=openCreatePageDialog;
   $('backup').onclick=()=>{saveCurrent();persist();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));a.download='rosedic_backup.json';a.click()};
 
-  $('pdfBtn').onclick=()=>{saveCurrent();persist();window.print()};
+  pdfBtn.onclick=e=>{
+    e.preventDefault();
+    saveCurrent();
+    persist();
+    window.print();
+  };
 
-  applyAppearance();
-  systemTheme.addEventListener?.('change',()=>{
-    if(getAppearance()==='system')applyAppearance('system');
-  });
+  applyTheme(localStorage.getItem(THEME_KEY)==='dark'?'dark':'light');
 
   bootCloud();
 
